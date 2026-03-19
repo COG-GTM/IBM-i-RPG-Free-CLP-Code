@@ -1,0 +1,2 @@
+-- Index on CUSTMAST.NAME for customer name lookups
+create index custmast_name on custmast(name);
