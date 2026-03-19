@@ -311,11 +311,3 @@ ADD COLUMN ChgTime TIMESTAMP not null DEFAULT CURRENT_TIMESTAMP
 ADD column ChgUser varchar(18) not null DEFAULT USER;
 
 update custmast set chguser = '*SYSTEM*';
-
--- Indexes --
-drop index if exists custmast_name;
-create index custmast_name on custmast(name);
-drop index if exists custmast_city;
-create index custmast_city on custmast(city);
-drop index if exists custmast_state;
-create index custmast_state on custmast(state);

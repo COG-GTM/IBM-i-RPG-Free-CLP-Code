@@ -1,0 +1,2 @@
+-- Index on CUSTMAST.CITY for city-based lookups
+create index custmast_city on custmast(city);
