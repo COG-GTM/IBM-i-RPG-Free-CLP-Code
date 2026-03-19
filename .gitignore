@@ -1,0 +1,10 @@
+# Node.js tooling
+node_modules/
+
+# Source Orbit generated files
+sourceorbit.json
+Makefile
+
+# OS files
+.DS_Store
+Thumbs.db

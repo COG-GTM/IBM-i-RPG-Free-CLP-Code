@@ -1,0 +1,24 @@
+{
+  "name": "ibm-i-rpg-free-clp-code",
+  "version": "1.0.0",
+  "description": "Working example code using RPGLE free-format, embedded SQL and CLP for the IBM i.",
+  "scripts": {
+    "lint": "rpglint --cwd .",
+    "lint:rpg": "rpglint --cwd .",
+    "deps": "so --cwd .",
+    "deps:json": "so --cwd . -bf json",
+    "deps:make": "so --cwd . -bf make -wa",
+    "validate": "npm run lint && npm run deps"
+  },
+  "keywords": [
+    "ibmi",
+    "rpgle",
+    "clp",
+    "as400"
+  ],
+  "license": "ISC",
+  "devDependencies": {
+    "@halcyontech/rpglint": "^0.27.0",
+    "@ibm/sourceorbit": "^1.4.1"
+  }
+}
