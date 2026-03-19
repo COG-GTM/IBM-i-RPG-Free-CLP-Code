@@ -1,10 +1,13 @@
- -- Creates CUSTMAST and Indexes -------------------------------
- -- Can then  "CALL LOADCUST2 nnn" to load nnn random records.
+ -- Create CUSTMAST & Indexs and load 300 records -----------
+ -- Program LOADCUST submits this to batch.
+ -- Or you can run it interactively in iACS Run SQL Scripts
 
  -- 02/2024 Change CustID to char to allow alpha/numeric keys
- 
+
  set schema lennons1;  -- <<<<< Change to your library <<<<<<
  DROP TABLE custmast;
+
+-- 02/2024 Change CUSTID to char to allow alpha-numeric key
 
 CREATE TABLE custmast (
     CustID CHAR(4) NOT NULL
@@ -17,15 +20,6 @@ CREATE TABLE custmast (
     ,AcctMgr CHAR(40) DEFAULT ' '
     ,AcctPhone CHAR(20) DEFAULT ' '
     ,Active CHAR(1) DEFAULT 'Y'
-    ,ChgTime TIMESTAMP not null DEFAULT CURRENT_TIMESTAMP
-    ,ChgUser varchar(18) not null DEFAULT USER
 ,PRIMARY KEY (Custid)
 )
 RCDFMT CUSTMASTF;
--- Indexes --
-drop index if exists custmast_name;
-create index custmast_name on custmast(name);
-drop index if exists custmast_city;
-create index custmast_city on custmast(city);
-drop index if exists custmast_state;
-create index custmast_state on custmast(state);

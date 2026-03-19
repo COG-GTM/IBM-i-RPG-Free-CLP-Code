@@ -1,29 +1,3 @@
- -- Create CUSTMAST & Indexs and load 300 records -----------
- -- Program LOADCUST submits this to batch.
- -- Or you can run it interactively in iACS Run SQL Scripts
-
- -- 02/2024 Change CustID to char to allow alpha/numeric keys
-
- set schema lennons1;  -- <<<<< Change to your library <<<<<<
- DROP TABLE custmast;
-
--- 02/2024 Change CUSTID to char to allow alpha-numeric key
-
-CREATE TABLE custmast (
-    CustID CHAR(4) NOT NULL
-    ,Name CHAR(40) NOT NULL
-    ,Addr CHAR(40) NOT NULL
-    ,City CHAR(20) NOT NULL
-    ,State CHAR(2) NOT NULL
-    ,Zip CHAR(10) NOT NULL
-    ,CorpPhone CHAR(20) DEFAULT ' '
-    ,AcctMgr CHAR(40) DEFAULT ' '
-    ,AcctPhone CHAR(20) DEFAULT ' '
-    ,Active CHAR(1) DEFAULT 'Y'
-,PRIMARY KEY (Custid)
-)
-RCDFMT CUSTMASTF;
-
 -- Insert some data --
 INSERT INTO custmast (CustID, Name, Addr, City, State, Zip, CorpPhone, AcctMgr, AcctPhone, Active) VALUES (1, 'Aliquet Nec Imperdiet Limited', 'Ap #766-3317 Penatibus St.', 'Des Moines', 'IA', '90911-1234', '(925)276-2778', 'Simon,  Gannon D.', '(118)850-9146', 'N');
 INSERT INTO custmast (CustID, Name, Addr, City, State, Zip, CorpPhone, AcctMgr, AcctPhone, Active) VALUES (2, 'Nam Porttitor LLP', '802-7392 Elit,  Rd.', 'Rockville', 'MD', '60342-2222', '(734)960-9274', 'Kirk,  Hamish U.', '(435)357-0265', 'N');

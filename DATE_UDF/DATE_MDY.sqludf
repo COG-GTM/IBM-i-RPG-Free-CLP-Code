@@ -1,0 +1,14 @@
+-- Create the DATE_MDY UDF (User Defined Function) using
+-- the routine in the DATE_SQL Service program.
+
+CREATE OR REPLACE FUNCTION DATE_MDY
+        (INDATE  DECIMAL(8, 0) )
+        RETURNS DATE
+        PARAMETER STYLE SQL
+        LANGUAGE RPGLE
+        NO SQL
+        DETERMINISTIC
+        EXTERNAL NAME 'DATE_SQL(DATE_MDY)'
+        RETURNS NULL ON NULL INPUT
+        NO EXTERNAL ACTION
+;
