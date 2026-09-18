@@ -38,6 +38,18 @@ The display file uses a private set of indicators, something I started doing to 
   If the cursor is in a field  with a + in the field name (ST+ here) you can press F4 to prompt the field.
   
   Conceptually, you can call this program from almost anywhere and control access to it  by whatever menuing or security system you have in place. The general user population would progably get Inquiry and Sales would have Maintenance. Selection could be used for any in-house program that needed to prompt for  a customer id number. 
+
+#### Access control
+
+  The mode parameter is what decides whether a caller gets Inquiry, Maintenance or Selection, so it is a convenience for the caller and not a security control. Anyone who can call the program can pass `M` and get maintenance. Secure it like this:
+
+- Set the program object to `*PUBLIC *EXCLUDE` (`GRTOBJAUT OBJ(yourlib/PMTCUSTR) OBJTYPE(*PGM) USER(*PUBLIC) AUT(*EXCLUDE)`).
+- Call it from a menu option or driver program that adopts authority (`USRPRF(*OWNER)`) and passes only the mode that user is entitled to.
+- Give the same treatment to MTNCUSTR, which does the actual updates.
+
+  The program validates its parameters at entry: one or two parameters, mode `S`, `M` or `I`, and mode `S` requires the customer id parameter. Anything else ends with an escape message. That is defensive validation against caller errors, not access control.
+
+  Calling it from the command line with no parameter is a development convenience only. In a production library the program should not be callable by end users at all, so that mode only ever shows up while you are testing.
   
   Note that this version uses a static SQL cursor, where City and State selection criteria use a "between" predicate. This differs from the originally posted version which used a dynamic cursor which had to be prepared when the selection criteria changed. I think a static cursor makes coding easier and can improve performance since it doesn't need a "prepare". Conversely, on large files this approach may hurt performance. However, I tested the program on PUB400.COM with 1 million records and there was no discernable performance hit.
 
