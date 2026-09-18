@@ -87,6 +87,10 @@ Escaneo de todos los fuentes RPG, SQLRPGLE, CLP, CLLE y SQL del repositorio.
 
 ## 5. Verificación
 
+Se ejecutaron 77 comprobaciones (todas superadas): estáticas sobre los fuentes fusionados (presencia y **orden** de cada control, ausencia de los patrones inseguros originales, consistencia entre copias duplicadas, barrido de secretos) y puertos ejecutables de la lógica añadida (`XmlEscape` del RPG, el bloque `translate`/`locate` del SQL PL, y `%CHECK`/`%CHECKR`/`%SCAN` del CL) contra cargas útiles de inyección y entradas legítimas.
+
+Defecto detectado por esa ejecución y corregido: en `PGM_REFS/pgm_refs.sql`, `trim(translate(...))` no rechazaba un blanco embebido (`translate` convierte los caracteres permitidos en blancos y el `trim` elimina también el original), por lo que `'A B'` llegaba concatenado a `DSPPGMREF PGM(lib/A B)`. Se añadió `locate(' ', v_INLIB) > 0` y `locate(' ', v_INPGM) > 0`. Los paréntesis y demás caracteres no permitidos sí quedaban bloqueados desde el principio.
+
 - Las cinco sub-ramas se fusionaron en `security/scan-remediation` sin conflictos.
 - `APIs/LCKOBJC.CLLE` y `APIs_SQL/LCKOBJC.CLLE` siguen siendo byte a byte idénticos tras la remediación.
 - Búsqueda posterior: el único `PREPARE` del repositorio sigue siendo el de `PGM_REFS/pgm_refs.sql`, ahora precedido de validación; no hay `EXECUTE IMMEDIATE`.
