@@ -16,6 +16,21 @@
 //            I - Inquiry, read only: 5=Display
 // 2  Char 4  Selected customer id if parm 1 is S.
 
+// The parameters are validated at entry: one or two parameters
+// must be passed, the type must be S, M or I, and S requires the
+// customer id parameter. Anything else ends with an escape
+// message rather than running in an unintended mode.
+
+// Access control:
+// ---------------
+// The mode parameter decides whether the caller gets inquiry,
+// maintenance or selection, so it is not a security control in
+// itself. Secure the program object with *PUBLIC *EXCLUDE and
+// call it from a menu or driver program that adopts authority
+// (USRPRF(*OWNER)) and passes the mode the user is entitled to.
+// Do not rely on the parameter check for security; it is
+// defensive validation only.
+
 //=============================================================
 // Program uses a full screen expanding subfile to select
 // a Customer Master record.
@@ -67,6 +82,8 @@
 // 01/2025 Require at least one parameter.
 //         Remove commented SQLPROBLEM code.
 //         Fix some issues with "Return selected customer" 
+// 09/2026 Validate the entry parameters and document the
+//         access control the program relies on.
 //============================================================
 
 ctl-opt dftactgrp(*no) actgrp(*caller) option(*nodebugio: *srcstmt)
@@ -225,12 +242,32 @@ for fetch only
 //=============================================================
 // === Program Starts Here ====================================
 //=============================================================
-// Check at least one parameter. Calling from the command line
+// Check the parameters. Calling from the command line
 // without a parm caused confusion for newer developers.       
 // In a production environment, this would be called from a 
-// tested menu or some program that enforced security.
+// tested menu or some program that enforced security, and the
+// program object itself would be *PUBLIC *EXCLUDE.
 if %parms() = 0;
     snd-msg *DIAG (%trim(PgmName) + ': There must be at least one parameter'); 
+    snd-msg *ESCAPE 'See previous diagnostic (*DIAG) message ';
+endif;
+
+if %parms() > %parmnum(pCustID);
+    snd-msg *DIAG (%trim(PgmName) + ': Too many parameters passed');
+    snd-msg *ESCAPE 'See previous diagnostic (*DIAG) message ';
+endif;
+
+// Only the documented modes are accepted.
+if pParmType <> 'S' and pParmType <> 'M' and pParmType <> 'I';
+    snd-msg *DIAG (%trim(PgmName) +
+                   ': Parameter 1 must be S, M or I');
+    snd-msg *ESCAPE 'See previous diagnostic (*DIAG) message ';
+endif;
+
+// Selection mode needs the field the customer id is returned in.
+if pParmType = 'S' and %parms() < %parmnum(pCustID);
+    snd-msg *DIAG (%trim(PgmName) +
+                   ': Parameter 2 is required when parameter 1 is S');
     snd-msg *ESCAPE 'See previous diagnostic (*DIAG) message ';
 endif;
 

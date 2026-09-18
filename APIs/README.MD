@@ -35,6 +35,15 @@ It shows the details of up to 4 jobs and lists how many additional jobs, if any,
 
 This is the command processing program for the GETOBJUSR command.  It calls GETOBJUR to get the lock information.
 
+Because a command processing program can also be called directly, it validates its parameters before using them:
+
+- The object name and library taken from the 20 byte OBJECT parameter must be non-blank and contain only valid name characters (no embedded blanks).
+- The object type must be one of the types the GETOBJUSR command allows.
+- For *FILE objects, a member (or *ALL/*FIRST/*NONE) must be supplied.
+- CHKOBJ verifies the object exists and the caller has *USE authority to it.
+
+Any failure ends the program with an escape message (CPF9898) describing the problem, instead of letting a partly built object name reach RTVOBJD and the API.
+
 ### GETOBJUR.RPGLE
 
 This RPG program creates a user space in QTEMP, then calls the QWCLOBJL (List Object Locks) API to populate the user spaces, calls SRTUSRSPC to sort by job, returns the requested message and/or file, then deletes the user space.

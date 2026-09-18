@@ -4,6 +4,29 @@ USADRVAL is a service program in RPG Free which uses the QSYS2.HTTP_GET SQL func
 
 To use the USADRVAL you need to obtain a User Id from the US Post Office. [Follow link here](https://www.usps.com/business/web-tools-apis/general-api-developer-guide.htm#_Toc24631952) to register for a free User Id,
 
+## Credentials
+
+The User Id and password are read from the `USPS_ID` and `USPS_PWD` data areas. Never put real values in the source code, in a CL that is kept in source control, or in a job's environment.
+
+Create the data areas and lock them down:
+
+```
+CRTDTAARA DTAARA(USPS_ID)  TYPE(*CHAR) LEN(20) VALUE('your user id')
+CRTDTAARA DTAARA(USPS_PWD) TYPE(*CHAR) LEN(20) VALUE('your password')
+GRTOBJAUT OBJ(USPS_ID)  OBJTYPE(*DTAARA) USER(*PUBLIC) AUT(*EXCLUDE)
+GRTOBJAUT OBJ(USPS_PWD) OBJTYPE(*DTAARA) USER(*PUBLIC) AUT(*EXCLUDE)
+GRTOBJAUT OBJ(USPS_ID)  OBJTYPE(*DTAARA) USER(APPOWNER) AUT(*USE)
+GRTOBJAUT OBJ(USPS_PWD) OBJTYPE(*DTAARA) USER(APPOWNER) AUT(*USE)
+```
+
+Let `APPOWNER` (the application profile) own the service program and create it with `USRPRF(*OWNER)` so that end users reach the data areas only through adopted authority.
+
+The USPS API takes the credentials in the query string, so they can end up in job logs, SQL traces and program dumps. USADRVAL clears both values from memory immediately after the API call and passes only a generic text to `SQLProblem`, but you should still avoid running the service program with debug or SQL tracing active (`STRDBG`, SQL trace, job logging level 4), and rotate the credentials if a dump or trace with the request ever leaves the system.
+
+## XML escaping
+
+The request document is built by concatenation, so every value that goes into it (address fields and credentials alike) is passed through the local `XmlEscape` procedure, which replaces `&`, `<`, `>`, `"` and `'` with their entity references. Without it an address containing, say, `Smith & Sons "A"` would break the document or let a caller inject elements or attributes.
+
 Included is a demo interactive program which is a rewritten version of MNTCUSTR in the [5250_Subfile](https://github.com/SJLennon/IBM-i-RPG-Free-CLP-Code/tree/master/5250_Subfile) directory.
 
 ## CRTBNDDIR.CLLE

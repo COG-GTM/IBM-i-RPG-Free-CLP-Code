@@ -18,6 +18,9 @@ GETOBJUC: +
 /* -----------------------------------------------------------------*/
 /* 02/--/2024 CPF7306 to allow for SQL created GETOBJUP member      */
 /* -----------------------------------------------------------------*/
+/* 09/--/2026 Validate the parameters and check object existence    */
+/*            and *USE authority before using them.                 */
+/* -----------------------------------------------------------------*/
 
 /* Input parameters */
   DCL VAR(&OBJECT)     TYPE(*CHAR) LEN(20)    /* Obj & lib */
@@ -33,6 +36,37 @@ GETOBJUC: +
   DCL VAR(&FRMOBJLIB)  TYPE(*CHAR) LEN(10)    /* For duping file */
   DCL VAR(&FAKMSGFLD)  TYPE(*CHAR) LEN(1)     /* No msg fld passed */
 
+/* Parameter validation variables */
+  DCL VAR(&LASTPOS)    TYPE(*DEC)  LEN(5 0)   /* Last non blank */
+  DCL VAR(&WORK)       TYPE(*CHAR) LEN(10)    /* Name being checked */
+  DCL VAR(&SRCHTYPE)   TYPE(*CHAR) LEN(11)    /* "/" + object type */
+  DCL VAR(&ERRTEXT)    TYPE(*CHAR) LEN(132)   /* Validation error */
+  DCL VAR(&VALIDCHR)   TYPE(*CHAR) LEN(42) +
+     VALUE('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@_.*')
+
+/* Supported object types. Each type occupies an 11 byte slot   */
+/* made up of "/" followed by the type padded to 10 bytes. The  */
+/* list matches the VALUES list of the GETOBJUSR command.       */
+  DCL VAR(&TYPELIST)  TYPE(*CHAR) LEN(847) +
+     VALUE('/*ALRTBL   /*AUTL     /*BNDDIR   /*CFGL     /*CHTF+
+     MT   /*CLD      /*CLS      /*CMD      /*CNNL     /+
+     *COSD     /*CRQD     /*CSI      /*CSPMAP   /*CSPTB+
+     L   /*CTLD     /*DEVD     /*DOC      /*DTAARA   /*+
+     DTADCT   /*DTAQ     /*EDTD     /*EXITRG   /*FC+
+     T      /*FILE     /*FLR      /*FNTRSC   /*FNTTB+
+     L   /*FORMDF   /*FTR      /*GSS      /*IPXD     /*+
+     JOBD     /*JOBQ     /*JOBSCD   /*JRN      /*JRNRC+
+     V   /*LIB      /*LIND     /*LOCALE   /*MENU     /*+
+     MODD     /*MODULE   /*MSGF     /*MSGQ     /*M3+
+     6      /*M36CFG   /*NODL     /*NTBD     /*NWI+
+     D     /*NWSD     /*OUTQ     /*OVL      /*PAGDF+
+     N   /*PAGSEG   /*PDG      /*PGM      /*PNLGRP   /*+
+     PRDAVL   /*PRDDFN   /*PRDLOD   /*PSFCFG   /*QMFOR+
+     M   /*QMQRY    /*QRYDFN   /*SBSD     /*SCHIDX   /*+
+     SPADCT   /*SQLPKG   /*SRVPGM   /*SSND     /*S3+
+     6      /*TBL      /*USRIDX   /*USRPRF   /*USR+
+     Q     /*USRSPC   /*WSCST    ')
+
  /* Error Handling Variables */
   DCL VAR(&E_MSGID)    TYPE(*CHAR) LEN(7)
   DCL VAR(&E_MSGF)     TYPE(*CHAR) LEN(10)
@@ -42,9 +76,79 @@ GETOBJUC: +
 /* Catch unmonitored errors */
   MONMSG MSGID(CPF0000) EXEC(GOTO CMDLBL(ERROR))
 
-/* Convert *LIBL/*CURLIB into a real name, if possible     */
+/* Validate the parameters before they are used to access objects */
   CHGVAR VAR(&OBJNAM) VALUE(%SST(&OBJECT 1 10))
   CHGVAR VAR(&OBJLIB) VALUE(%SST(&OBJECT 11 10))
+
+/* Object name: required, no embedded blanks or odd characters */
+  CHGVAR VAR(&LASTPOS) VALUE(%CHECKR(' ' &OBJNAM))
+  IF COND(&LASTPOS *EQ 0) THEN(DO)
+      CHGVAR VAR(&ERRTEXT) VALUE('GETOBJUSR: Object name is required.')
+      GOTO CMDLBL(PARMERR)
+  ENDDO
+  CHGVAR VAR(&WORK) VALUE('AAAAAAAAAA')
+  CHGVAR VAR(%SST(&WORK 1 &LASTPOS)) +
+     VALUE(%SST(&OBJNAM 1 &LASTPOS))
+  IF COND(%CHECK(&VALIDCHR &WORK) *NE 0) THEN(DO)
+      CHGVAR VAR(&ERRTEXT) +
+         VALUE('GETOBJUSR: Invalid object name: ' *CAT &OBJNAM)
+      GOTO CMDLBL(PARMERR)
+  ENDDO
+
+/* Library name: required, no embedded blanks or odd characters */
+  CHGVAR VAR(&LASTPOS) VALUE(%CHECKR(' ' &OBJLIB))
+  IF COND(&LASTPOS *EQ 0) THEN(DO)
+      CHGVAR VAR(&ERRTEXT) VALUE('GETOBJUSR: Library is required.')
+      GOTO CMDLBL(PARMERR)
+  ENDDO
+  CHGVAR VAR(&WORK) VALUE('AAAAAAAAAA')
+  CHGVAR VAR(%SST(&WORK 1 &LASTPOS)) +
+     VALUE(%SST(&OBJLIB 1 &LASTPOS))
+  IF COND(%CHECK(&VALIDCHR &WORK) *NE 0) THEN(DO)
+      CHGVAR VAR(&ERRTEXT) +
+         VALUE('GETOBJUSR: Invalid library name: ' *CAT &OBJLIB)
+      GOTO CMDLBL(PARMERR)
+  ENDDO
+
+/* Object type: must be one of the supported object types */
+  CHGVAR VAR(&SRCHTYPE) VALUE('/' *CAT &TYPE)
+  IF COND(%SCAN(&SRCHTYPE &TYPELIST) *EQ 0) THEN(DO)
+      CHGVAR VAR(&ERRTEXT) +
+         VALUE('GETOBJUSR: Invalid object type: ' *CAT &TYPE)
+      GOTO CMDLBL(PARMERR)
+  ENDDO
+
+/* Member: only meaningful, and required, for *FILE objects */
+  IF COND(&TYPE *EQ '*FILE') THEN(DO)
+      CHGVAR VAR(&LASTPOS) VALUE(%CHECKR(' ' &MEMBER))
+      IF COND(&LASTPOS *EQ 0) THEN(DO)
+          CHGVAR VAR(&ERRTEXT) +
+             VALUE('GETOBJUSR: Member is required for *FILE.')
+          GOTO CMDLBL(PARMERR)
+      ENDDO
+      CHGVAR VAR(&WORK) VALUE('AAAAAAAAAA')
+      CHGVAR VAR(%SST(&WORK 1 &LASTPOS)) +
+         VALUE(%SST(&MEMBER 1 &LASTPOS))
+      IF COND(%CHECK(&VALIDCHR &WORK) *NE 0) THEN(DO)
+          CHGVAR VAR(&ERRTEXT) +
+             VALUE('GETOBJUSR: Invalid member name: ' *CAT &MEMBER)
+          GOTO CMDLBL(PARMERR)
+      ENDDO
+  ENDDO
+
+/* The object must exist and the caller must be authorized to it */
+  CHKOBJ OBJ(&OBJLIB/&OBJNAM) OBJTYPE(&TYPE) AUT(*USE)
+/* An object already allocated *EXCL cannot be resolved here, and  */
+/* that is the very case this program reports on, so carry on.     */
+  MONMSG MSGID(CPF9803)
+  MONMSG MSGID(CPF9801 CPF9802 CPF9810 CPF9815) EXEC(DO)
+      CHGVAR VAR(&ERRTEXT) +
+         VALUE('GETOBJUSR: Not found or not authorized: ' *CAT +
+         &OBJNAM)
+      GOTO CMDLBL(PARMERR)
+  ENDDO
+
+/* Convert *LIBL/*CURLIB into a real name, if possible     */
   RTVOBJD OBJ(&OBJLIB/&OBJNAM) OBJTYPE(&TYPE) RTNLIB(&OBJLIB)
   MONMSG MSGID(CPF9803) EXEC(DO) /*Cannot Allocate*/
       GOTO       CMDLBL(PASTLIBGET)
@@ -75,6 +179,13 @@ GETOBJUC: +
   ENDDO
 
 /* End of program */
+  GOTO CMDLBL(ENDPGM)
+
+/* Parameter validation failed - tell the caller what was wrong */
+PARMERR: +
+  SNDPGMMSG MSGID(CPF9898) MSGF(QCPFMSG) MSGDTA(&ERRTEXT) +
+     MSGTYPE(*ESCAPE)
+  MONMSG MSGID(CPF0000) /* Just in case */
   GOTO CMDLBL(ENDPGM)
 
 /* Error handler - resend any trapped escape message */
