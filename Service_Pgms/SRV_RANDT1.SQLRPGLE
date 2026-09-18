@@ -15,10 +15,19 @@ dcl-s wk int(10);
 dcl-s j int(10);
 exec sql drop table lennons1.rnum;
 exec sql create or replace table lennons1.rnum (num integer);
+if SQLSTATE <> '00000' and SQLSTATE <> '01567';
+  dsply 'Create Table failed';
+  *inlr = *on;
+  return;
+endif;
 
 for j = 1 to 100000;
   wk = Rand_Int(min:max);
   exec sql insert into lennons1.rnum values :wk;
+  if SQLSTATE <> '00000';
+    dsply 'Insert failed';
+    leave;
+  endif;
 endfor;
 
 *inlr = *on;

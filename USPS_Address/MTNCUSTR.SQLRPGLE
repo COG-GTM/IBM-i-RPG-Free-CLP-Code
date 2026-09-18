@@ -367,6 +367,8 @@ dcl-proc Main;
     SD_CHGTIME = ' ';
     SD_CHGUSER = ' ';
     // Show Changed stamp info
+    // The concat below formats display text into a host variable;
+    // it does not build SQL statement text.
     if (CHGUSER <> '*SYSTEM*' and CHGUSER <> ' ');
       exec sql VALUES
             varchar_format(:CHGTIME, 'YYYY-Mon-DD')
