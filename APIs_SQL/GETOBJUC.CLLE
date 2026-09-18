@@ -133,6 +133,7 @@ GETOBJUC: +
 
 /* The object must exist and the caller must be authorized to it */
   CHKOBJ OBJ(&OBJLIB/&OBJNAM) OBJTYPE(&TYPE) AUT(*USE)
+  MONMSG MSGID(CPF9803) /*Locked - that is what we report on*/
   MONMSG MSGID(CPF9801 CPF9802 CPF9810 CPF9815) EXEC(DO)
       CHGVAR VAR(&ERRTEXT) +
          VALUE('GETOBJUSR: Not found or not authorized: ' *CAT +
