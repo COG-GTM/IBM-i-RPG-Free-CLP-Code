@@ -2,7 +2,7 @@
 
 Repositorio: `COG-GTM/IBM-i-RPG-Free-CLP-Code`
 Rama de integración: `security/scan-remediation`
-Estado: **informe inicial (Fase 0)** — se actualiza con el resultado final tras fusionar las remediaciones por área.
+Estado: **informe final** — las cinco áreas de remediación están fusionadas en `security/scan-remediation`.
 
 ## 1. Alcance e inventario
 
@@ -70,4 +70,24 @@ Escaneo de todos los fuentes RPG, SQLRPGLE, CLP, CLLE y SQL del repositorio.
 
 ## 4. Resultado final
 
-Pendiente: se completa en la consolidación con el estado de cada hallazgo (remediado / mitigado / documentado) y los enlaces a los PR intermedios por área.
+| ID | Archivo | Línea(s) | Severidad | Estado | Remediación aplicada | PR |
+|---|---|---|---|---|---|---|
+| H-1 | `USPS_Address/USADRVAL.SQLRPGLE` | 62–96 (proc `XmlEscape`), 152–177 | ALTA | remediado | Procedimiento local `XmlEscape` que sustituye `&`, `<`, `>`, `"`, `'` por entidades; todos los valores de dirección se escapan antes de construir el documento XML. | [#5](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/5) |
+| H-2 | `USPS_Address/USADRVAL.SQLRPGLE` | 16–29, 114–135, 168–177 | ALTA | remediado | Credenciales también escapadas; `clear` de `ID`/`PWD`/`xID`/`xPWD` tras la llamada; cabecera documenta `*PUBLIC *EXCLUDE`, autoridad adoptada y el riesgo de trazas/job log; `USPS_Address/Readme.md` amplía el aprovisionamiento seguro. | [#5](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/5) |
+| H-3 | `PGM_REFS/pgm_refs.sql` | 66–110, 138–160 | ALTA | remediado | Copias validadas `v_INLIB`/`v_INPGM`/`v_INTYPE` (trim+upper, no vacías, ≤10, juego de caracteres de nombre IBM i, `*LIBL`/`*CURLIB` admitidos, lista blanca de tipos); si falla se inserta fila de error y `return` sin ejecutar `QSYS2.QCMDEXC`. | [#8](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/8) |
+| H-4 | `PGM_REFS/pgm_refs.sql` | 138–158 | ALTA | remediado | Comprobación defensiva del identificador del fichero de trabajo antes del `prepare`; si no es un nombre SQL simple, fila de error y `return`. | [#8](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/8) |
+| M-1 | `APIs/LCKOBJC.CLLE`, `APIs_SQL/LCKOBJC.CLLE` | ~120–195 | MEDIA | remediado | Validación en el CPP: nombres no en blanco, caracteres permitidos (`%CHECK`), sin blancos embebidos, `&TYPE` con `*`, `&LCKSTATE` contra la lista de la CMD, `&MEMBER` si viene informado; fallo → etiqueta `BADPARM` con `CPF9898` `*ESCAPE`. Ambos fuentes siguen idénticos. | [#8](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/8) |
+| M-2 | `GRP_JOB/GRP_INIT.CLP` | 34–51 | MEDIA | mitigado y documentado | Se comprueba que la *GDA no esté en blanco antes de ejecutarla; modelo de confianza documentado en la cabecera y en `GRP_JOB/ReadMe.md` (uso solo en el job propio, sin autoridad adoptada, no reutilizar con entrada no confiable). | [#8](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/8) |
+| M-3 | `APIs/GETOBJUC.CLLE`, `APIs_SQL/GETOBJUC.CLLE` | 41–150 | MEDIA | remediado | Validación de nombre/biblioteca (`%CHECK`/`%CHECKR`), tipo contra lista, miembro obligatorio si `*FILE`, y `CHKOBJ ... AUT(*USE)` con `MONMSG` antes de `RTVOBJD`; errores por etiqueta `PARMERR` con `CPF9898`. | [#9](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/9) |
+| M-4 | `5250_Subfile/PMTCUSTR.SQLRPGLE` | 231–275 | MEDIA | remediado | Rechazo de `%parms()` excedente, de `pParmType` fuera de S/M/I y del modo `S` sin parámetro de retorno, con `snd-msg *DIAG` + `*ESCAPE`; control de acceso (`*PUBLIC *EXCLUDE`, `USRPRF(*OWNER)`) documentado en la cabecera y en `5250_Subfile/README.md`. | [#9](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/9) |
+| L-1 | `RcdLckDsp/RCDLCKBAD.RPGLE` | 29, 40 | BAJA | documentado | Sin cambios de lógica: cabecera marca la cadena como constante (bajo riesgo) y el programa como anti-patrón didáctico no apto para producción; nota también en `RcdLckDsp/Readme.md`. | [#8](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/8) |
+| L-2 | `RcdLckDsp/RCDLCKDEMO.RPGLE` | 35, 49 | BAJA | documentado | Nota de seguridad en la cabecera: cadena constante, nunca construir el comando con datos de usuario. | [#8](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/8) |
+| L-3 | Fuentes con `EXEC SQL` (`5250_Subfile`, `SQL_SKELETON`, `Service_Pgms`, `USPS_Address/MTNCUSTR`) | — | BAJA | confirmado / remediado | Revisión completa: toda la entrada de usuario usa variables host; no hay `PREPARE`/`EXECUTE IMMEDIATE` fuera de `PGM_REFS/pgm_refs.sql`. Se añadieron notas de uso de variables host y se condicionó el `DUMP(A)` de `Service_Pgms/SRV_SQL.SQLRPGLE` a una variable de entorno explícita para no volcar datos sensibles. | [#7](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/7) |
+| L-4 | Global | — | BAJA / INFO | documentado | No hay secretos literales en los fuentes; las credenciales USPS viven en data areas. Nuevo `docs/SECRETS_MANAGEMENT.md` (enlazado desde el README) con aprovisionamiento, autoridades `*PUBLIC *EXCLUDE`, perfiles adoptados, rotación, no exposición en job logs/spool/depuración y checklist de revisión. | [#6](https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code/pull/6) |
+
+## 5. Verificación
+
+- Las cinco sub-ramas se fusionaron en `security/scan-remediation` sin conflictos.
+- `APIs/LCKOBJC.CLLE` y `APIs_SQL/LCKOBJC.CLLE` siguen siendo byte a byte idénticos tras la remediación.
+- Búsqueda posterior: el único `PREPARE` del repositorio sigue siendo el de `PGM_REFS/pgm_refs.sql`, ahora precedido de validación; no hay `EXECUTE IMMEDIATE`.
+- **No hay compilador IBM i disponible**: RPG free-form, CL y SQL PL se revisaron manualmente; no se compiló ni ejecutó nada. El repositorio no tiene lint, tests ni pipeline de build.
