@@ -93,12 +93,14 @@ begin
     end if;
 
     if error_msg <> ' ' then
+        -- The REFS columns are not nullable, so the error row uses
+        -- the coalesced copies rather than the raw parameters.
         -- <<<<<< Change this table library >>>>>>>
         insert into lennonsb.refs values (
             p_Depth,
-            p_INLIB,
-            p_inpgm,
-            p_INTYPE,
+            v_INLIB,
+            v_INPGM,
+            v_INTYPE,
             error_msg,
             '*ERROR',
             '*ERROR',
@@ -127,9 +129,9 @@ begin
         -- <<<<<< Change this table library >>>>>>>
         insert into lennonsb.refs values (
             p_Depth,
-            p_INLIB,
-            p_inpgm,
-            p_INTYPE,
+            v_INLIB,
+            v_INPGM,
+            v_INTYPE,
             error_msg,
             '*ERROR',
             '*ERROR',
