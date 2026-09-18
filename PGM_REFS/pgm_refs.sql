@@ -88,12 +88,14 @@ begin
     end if;
 
     if error_msg <> ' ' then
+        -- The REFS columns are NOT NULL, so report the normalised
+        -- values: a null or blank parameter is logged as *BLANK.
         -- <<<<<< Change this table library >>>>>>>
         insert into lennonsb.refs values (
             p_Depth,
-            p_INLIB,
-            p_inpgm,
-            p_INTYPE,
+            coalesce(nullif(v_INLIB , ''), '*BLANK'),
+            coalesce(nullif(v_INPGM , ''), '*BLANK'),
+            coalesce(nullif(v_INTYPE, ''), '*BLANK'),
             error_msg,
             '*ERROR',
             '*ERROR',
