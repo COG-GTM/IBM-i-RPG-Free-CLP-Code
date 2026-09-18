@@ -19,6 +19,12 @@
 //  
 //   - QIWS/QCUSTCDT: believed to be on virtually all systems.
 //  ==============================================================
+//   Security note: the QCMDEXC call below runs a constant command
+//     string (OVRDBF ... WAITRCD(1)). No user input goes into the
+//     command, so there is no command injection exposure here.
+//     Never build the string passed to QCMDEXC from user supplied
+//     data without validating it first.
+//  ==============================================================
 
 Ctl-Opt DEBUG(*YES) OPTION(*NODEBUGIO:*SRCSTMT:*NOUNREF);
 Ctl-Opt DFTACTGRP(*NO) ACTGRP(*NEW);

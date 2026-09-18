@@ -38,6 +38,18 @@ This is called from GRP to set your development library list. All group jobs wil
 
 This program is called from GRP to establish each group job. The command it runs is passed from GRP in the *GDA.
 
+### Trust model (please read)
+
+GRP_INIT runs whatever command text it finds in the *GDA with `CALL PGM(QCMDEXC) PARM(&GDA 512)`. That is the design of the utility: the *GDA belongs to the group jobs of a single interactive session, it is set by GRP in that same session, and the command runs under the developer's own authority in the developer's own job. Anyone who can change the *GDA of that job can run any command the job is authorized to.
+
+So:
+
+* Use it as a developer tool in your own interactive session only.
+* Do not adopt authority (`USRPRF(*OWNER)`) in GRP, GRP_INIT or GRP_ATN.
+* Do not reuse this "run whatever is in the data area" pattern anywhere the command text can come from untrusted input (a database field, a screen field, a parameter supplied by another user). Build and validate the command instead.
+
+GRP_INIT only checks that the *GDA is not blank before calling QCMDEXC; it deliberately does not try to police the command itself.
+
 ## GRP_ATN
 
 This is called when the Attn key is pressed. **Shift+Esc is the Attn keys in most 5250 emulators.** It pops up a very functional but effective IBM menu to pick another group job. You can add your own menu to make this more friendly.

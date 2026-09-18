@@ -49,6 +49,11 @@ LCKOBJC: +
   DCL VAR(&WAITMIN)    TYPE(*DEC)  LEN(5)     /* Wait in mins */
   DCL VAR(&WAITMSG)    TYPE(*CHAR) LEN(20)    /* temp field */
   DCL VAR(&ALC_CMD)    TYPE(*CHAR) LEN(200)   /* ALLOBJ Command */
+  DCL VAR(&VALIDSPC)   TYPE(*CHAR) LEN(70) +
+      VALUE(' *ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@_.')
+  DCL VAR(&BADPARMD)   TYPE(*CHAR) LEN(100)  /* Bad parm message */
+  DCL VAR(&BLKPOS)     TYPE(*DEC)  LEN(5 0)  /* 1st blank */
+  DCL VAR(&LSTPOS)     TYPE(*DEC)  LEN(5 0)  /* last non blank */
 
  /* Error Handling Variables */
   DCL VAR(&E_MSGID)    TYPE(*CHAR) LEN(7)
@@ -82,6 +87,70 @@ LCKOBJC: +
   /* Member is optional */
   IF COND(&ELEMP *GT 3) THEN(DO)
       CHGVAR VAR(&MEMBER) VALUE(%SST(&P_OBJ 39 10))
+  ENDDO
+
+/*=== Defensive validation of the ALCOBJ elements ==================*/
+/* The LCKOBJ command validates these values, but this program can  */
+/* be called directly, and the values are concatenated into a       */
+/* command string that is run with QCMDEXC. A blank, a quote or a   */
+/* parenthesis in a name would let extra parameters or commands be  */
+/* added to the ALCOBJ command, so reject anything that is not a    */
+/* plain object name or an allowed special value.                   */
+  IF COND((&OBJNAM *EQ ' ') *OR (&OBJLIB *EQ ' ')) THEN(DO)
+      CHGVAR VAR(&BADPARMD) VALUE('LCKOBJC: object or library name +
+         is blank')
+      GOTO CMDLBL(BADPARM)
+  ENDDO
+
+/* A valid name holds only allowed characters, and any blank in it */
+/* must be a trailing blank (first blank after last non blank).    */
+  CHGVAR VAR(&BLKPOS) VALUE(%SCAN(' ' &OBJNAM))
+  CHGVAR VAR(&LSTPOS) VALUE(%CHECKR(' ' &OBJNAM))
+  IF COND((%CHECK(&VALIDSPC &OBJNAM) *NE 0) *OR +
+          ((&BLKPOS *NE 0) *AND (&BLKPOS *LT &LSTPOS))) THEN(DO)
+      CHGVAR VAR(&BADPARMD) VALUE('LCKOBJC: invalid object name ' +
+         *CAT &OBJNAM)
+      GOTO CMDLBL(BADPARM)
+  ENDDO
+
+  CHGVAR VAR(&BLKPOS) VALUE(%SCAN(' ' &OBJLIB))
+  CHGVAR VAR(&LSTPOS) VALUE(%CHECKR(' ' &OBJLIB))
+  IF COND((%CHECK(&VALIDSPC &OBJLIB) *NE 0) *OR +
+          ((&BLKPOS *NE 0) *AND (&BLKPOS *LT &LSTPOS))) THEN(DO)
+      CHGVAR VAR(&BADPARMD) VALUE('LCKOBJC: invalid library name ' +
+         *CAT &OBJLIB)
+      GOTO CMDLBL(BADPARM)
+  ENDDO
+
+/* Object type must be a *TYPE value, lock state is a short list. */
+  CHGVAR VAR(&BLKPOS) VALUE(%SCAN(' ' &TYPE))
+  CHGVAR VAR(&LSTPOS) VALUE(%CHECKR(' ' &TYPE))
+  IF COND((%SST(&TYPE 1 1) *NE '*') *OR +
+          (%CHECK(&VALIDSPC &TYPE) *NE 0) *OR +
+          ((&BLKPOS *NE 0) *AND (&BLKPOS *LT &LSTPOS))) THEN(DO)
+      CHGVAR VAR(&BADPARMD) VALUE('LCKOBJC: invalid object type ' +
+         *CAT &TYPE)
+      GOTO CMDLBL(BADPARM)
+  ENDDO
+
+  IF COND(&LCKSTATE *NE '*SHRRD'  *AND &LCKSTATE *NE '*SHRNUP' +
+     *AND &LCKSTATE *NE '*SHRUPD' *AND &LCKSTATE *NE '*EXCLRD' +
+     *AND &LCKSTATE *NE '*EXCL') THEN(DO)
+      CHGVAR VAR(&BADPARMD) VALUE('LCKOBJC: invalid lock state ' +
+         *CAT &LCKSTATE)
+      GOTO CMDLBL(BADPARM)
+  ENDDO
+
+/* Member is optional, but if given it must be a name too. */
+  IF COND(&MEMBER *NE ' ') THEN(DO)
+      CHGVAR VAR(&BLKPOS) VALUE(%SCAN(' ' &MEMBER))
+      CHGVAR VAR(&LSTPOS) VALUE(%CHECKR(' ' &MEMBER))
+      IF COND((%CHECK(&VALIDSPC &MEMBER) *NE 0) *OR +
+              ((&BLKPOS *NE 0) *AND (&BLKPOS *LT &LSTPOS))) THEN(DO)
+          CHGVAR VAR(&BADPARMD) VALUE('LCKOBJC: invalid member name +
+             ' *CAT &MEMBER)
+          GOTO CMDLBL(BADPARM)
+      ENDDO
   ENDDO
 
 /* Set the default wait value                                */
@@ -219,6 +288,11 @@ TALKTOOP: +
 
 /* End of program */
   GOTO CMDLBL(ENDPGM)
+
+/*=== Parameter validation failure ================================*/
+BADPARM: +
+  SNDPGMMSG  MSGID(CPF9898) MSGF(QCPFMSG) MSGDTA(&BADPARMD) +
+     MSGTYPE(*ESCAPE)
 
 /*=== Error handler - resend diagnostic & escape messages =========*/
 ERROR: +

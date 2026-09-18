@@ -45,8 +45,16 @@ Call it in two separate sessions to see a RCDLCKDSP pop up a window.
 
 ## RCDLCKBAD
 
+**Teaching anti-pattern: do not use this program, or its style, in production.** It exists only to show the bad outcome. Use RCDLCKDEMO as the model.
+
 This program demonstates what happens if you fail to account for the record you want to update being locked by someone else.  Typically the user get a message like this:
 
 ```Unable to allocate a record in file QCUSTCDT (R C G D F).```
 
 None of the possible responses is particularly useful.
+
+## Note on QCMDEXC
+
+RCDLCKDEMO and RCDLCKBAD both call QCMDEXC to run `OVRDBF FILE(QCUSTCDT) TOFILE(QIWS/QCUSTCDT) WAITRCD(1)`. The command string is a constant: no user input is placed in it, so there is no command injection exposure in these examples. OVRDBF cannot be coded directly in RPG and the SQL service QSYS2.QCMDEXC would run the same constant command, so the calls are left as they are.
+
+If you copy this pattern into your own code and the command string ever contains data supplied by a user, validate that data first (length, allowed characters, allowed special values). QCMDEXC runs whatever it is given.
