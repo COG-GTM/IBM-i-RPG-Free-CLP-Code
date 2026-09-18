@@ -32,6 +32,15 @@ If requested, this file is created in QTEMP. The contents would look like this:
 
 This is the command processing program for the GETOBJUSR command. It does some housekeeping and calls GETOBJUR. Unlike the version in [APIs](https://github.com/SJLennon/IBM-i-RPG-Free-CLP-Code/tree/master/APIs), it does not need to create QTEMP.GETOBJUP.
 
+Because a command processing program can also be called directly, it validates its parameters before using them:
+
+- The object name and library taken from the 20 byte OBJECT parameter must be non-blank and contain only valid name characters (no embedded blanks).
+- The object type must be one of the types the GETOBJUSR command allows.
+- For *FILE objects, a member (or *ALL/*FIRST/*NONE) must be supplied.
+- CHKOBJ verifies the object exists and the caller has *USE authority to it.
+
+Any failure ends the program with an escape message (CPF9898) describing the problem, instead of letting a partly built object name reach RTVOBJD and the SQL view.
+
 ## GETOBJUR.SQLRPGLE
 
 This creates QTEMP/GETOBJUP if requested, using SQL. Then it retreives the job name using the QSYS2.OBJECT_LOCK_INFO view, and orders it by job name. It populates file GETOBJUP using SQL.
