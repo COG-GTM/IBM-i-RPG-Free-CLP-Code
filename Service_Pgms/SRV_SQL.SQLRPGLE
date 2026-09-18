@@ -8,15 +8,26 @@
 // ADDBNDDIRE BNDDIR(SQL_BND) OBJ((SRV_SQL *SRVPGM *DEFER))
 
 ctl-opt nomain
-      bnddir('UTIL_BND')
+      bnddir('UTIL_BND': 'QC2LE')
       option(*NoDebugIo: *srcstmt)
 ;
 
+//=== Environment variable that enables the diagnostic dump ====
+// ADDENVVAR ENVVAR(SQLPROBLEM_DUMP) VALUE('*YES')
+dcl-c DUMP_ENVVAR 'SQLPROBLEM_DUMP';
+
+dcl-pr getenv pointer extproc('getenv');
+  envName pointer value options(*string);
+end-pr;
+
 //=== SQLProblem ===============================================
 // For those "Never should happen" SQL errors.
-// Issues DUMP(A) to dump memory, then ends program by
-// sending an *ESCAPE message of the supplied debugging message,
-// plus whatever SQL diagnostics we can fit into 512 chars.
+// Ends the program by sending an *ESCAPE message of the supplied
+// debugging message, plus whatever SQL diagnostics we can fit
+// into 512 chars.
+// DUMP(A) writes program storage (which may hold user data or
+// credentials passed to SQL) to a spool file, so it only runs
+// when environment variable SQLPROBLEM_DUMP is set to *YES.
 dcl-proc SQLProblem export;
   dcl-pi SQLProblem;
     piSQLDebug varchar(200) const;
@@ -32,6 +43,8 @@ dcl-proc SQLProblem export;
   dcl-s mySQLState CHAR(5);
   dcl-s mySQLMsgTxt varchar(32740);
   dcl-s mySQLMsgLgth int(5);
+
+  dcl-s pDumpEnv pointer;
 
   exec sql get diagnostics condition 1
       :mySQLState = RETURNED_SQLSTATE,
@@ -51,7 +64,10 @@ dcl-proc SQLProblem export;
     myDebugMsg += (%subst(mySQLMsgTxt: 1 :wkRem -5) + ' ..."');
   endif;
 
-  dump(a);
+  pDumpEnv = getenv(DUMP_ENVVAR);
+  if pDumpEnv <> *null and %str(pDumpEnv) = '*YES';
+    dump(a);
+  endif;
   SndEscMsg(myDebugMsg);
   return;
 end-proc;
