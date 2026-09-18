@@ -2,7 +2,9 @@
 
 Given a program (or any of the objects that DSPPGMREF handles), the PGM_REFS stored procedure will find all the obects that the program uses, and then recursively finds all that objects that they use, and so on, to an essentally unlimited depth.
 
-This is the product of my experimentation with SQL Procedures Language (SQL PL). It may be short on error handling, and it doesn't do any validity checking on the parameters. But since I expect you are a developer, you can probaly live with that. Or improve it.
+This is the product of my experimentation with SQL Procedures Language (SQL PL). It may be short on error handling.
+
+The parameters are now validated before they are used: `p_INLIB` and `p_INPGM` must be IBM i object names of 10 characters or less (letters, digits, `$ # @ _ .`, with `*LIBL` and `*CURLIB` also allowed for the library) and `p_INTYPE` must be one of `*PGM`, `*SRVPGM`, `*MODULE`, `*QRYDFN` or `*SQLPKG`. This matters because the values are concatenated into the `DSPPGMREF` and `DLTF` command strings that are run with `QSYS2.QCMDEXC`, which runs whatever it is handed: a value containing a blank or a parenthesis could otherwise add parameters or extra commands. When validation fails the procedure writes an error row into the REFS table (`*ERROR` in the `USES_*` fields, the reason in the text field) and returns without running anything. The work file name used in the `PREPARE` is checked the same way.
 
 If you have more experience than me, please feel free to suggest better coding techniques.
 

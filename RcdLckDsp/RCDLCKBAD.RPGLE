@@ -20,6 +20,20 @@
 // 
 // Note: QIWS/QCUSTCDT: believed to be on virtually all systems.
 // ==============================================================
+// *** TEACHING ANTI-PATTERN - DO NOT USE IN PRODUCTION ***
+//     This program deliberately shows what happens when a
+//     locked record is not handled. See RCDLCKDEMO for the way
+//     it should be done.
+//
+// Security note: the QCMDEXC call below runs a constant command
+//     string (OVRDBF ... WAITRCD(1)). No user input goes into
+//     the command, so there is no command injection exposure
+//     here. Never build the string passed to QCMDEXC from user
+//     supplied data without validating it first.
+//     QSYS2.QCMDEXC would run the same constant command and
+//     buys nothing, and OVRDBF cannot be coded directly in RPG,
+//     so the QCMDEXC call stays as it is.
+// ==============================================================
 
  Ctl-Opt DEBUG(*YES) OPTION(*NODEBUGIO:*SRCSTMT:*NOUNREF);
  Ctl-Opt DFTACTGRP(*NO) ACTGRP(*NEW);
