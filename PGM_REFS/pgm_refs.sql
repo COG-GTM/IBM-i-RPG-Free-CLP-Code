@@ -67,17 +67,22 @@ begin
     -- CL command string and run by QSYS2.QCMDEXC. QCMDEXC runs
     -- whatever it is given, so a value containing a blank or a
     -- parenthesis could add parameters or further commands.
+    -- translate() maps the allowed characters to blanks, so an
+    -- embedded blank would survive the trim: it is rejected on
+    -- its own with locate().
     set v_INLIB  = upper(trim(coalesce(p_INLIB , '')));
     set v_INPGM  = upper(trim(coalesce(p_INPGM , '')));
     set v_INTYPE = upper(trim(coalesce(p_INTYPE, '')));
 
     if v_INLIB = '' or length(v_INLIB) > 10
+        or locate(' ', v_INLIB) > 0
         or (v_INLIB not in ('*LIBL', '*CURLIB')
             and trim(translate(v_INLIB,
                 repeat(' ', length(name_chars)), name_chars)) <> '')
     then
         set error_msg = 'Invalid library name';
     elseif v_INPGM = '' or length(v_INPGM) > 10
+        or locate(' ', v_INPGM) > 0
         or trim(translate(v_INPGM,
             repeat(' ', length(name_chars)), name_chars)) <> ''
     then
