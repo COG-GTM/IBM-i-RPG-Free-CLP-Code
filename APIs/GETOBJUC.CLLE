@@ -138,6 +138,9 @@ GETOBJUC: +
 
 /* The object must exist and the caller must be authorized to it */
   CHKOBJ OBJ(&OBJLIB/&OBJNAM) OBJTYPE(&TYPE) AUT(*USE)
+/* An object already allocated *EXCL cannot be resolved here, and  */
+/* that is the very case this program reports on, so carry on.     */
+  MONMSG MSGID(CPF9803)
   MONMSG MSGID(CPF9801 CPF9802 CPF9810 CPF9815) EXEC(DO)
       CHGVAR VAR(&ERRTEXT) +
          VALUE('GETOBJUSR: Not found or not authorized: ' *CAT +
