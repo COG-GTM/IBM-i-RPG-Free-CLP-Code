@@ -28,6 +28,34 @@ CLP, CLLE, SQL, CMD, PNLGRP, DSPF, ficheros Markdown y el historial de commits a
 - Revisión del historial reciente en busca de valores eliminados (`git log -p -S"PASSWORD"`,
   historial completo de `USPS_Address/`).
 
+### 1.2.1 Comandos ejecutados (para reproducir)
+
+Revisión base: `6189c14` (`security/scan-remediation`), clon completo
+(`git rev-parse --is-shallow-repository` → `false`).
+
+```sh
+git clone https://github.com/COG-GTM/IBM-i-RPG-Free-CLP-Code.git
+cd IBM-i-RPG-Free-CLP-Code && git checkout security/scan-remediation
+
+# Credenciales por nombre, data areas y comandos sensibles
+rg -i -n '(password|passwd|pwd|userid|user id|usrprf|token|api[_ -]?key|secret|credential|apikey|auth|dtaara|CRTDTAARA|RTVDTAARA|connect to|login|https?://[^ ]*:[^ ]*@)' .
+
+# Cadenas de conexión, perfiles y material criptográfico
+rg -i -n '(QSECOFR|QPGMR|SBMJOB.*USER\(|USER\(|PASSWORD\(|PWD\(|https?://|ftp://|jdbc:|-----BEGIN|PRIVATE KEY|bearer |basic [A-Za-z0-9+/=]{10,}|AKIA[0-9A-Z]{16}|[A-Za-z0-9+/]{32,}={0,2})' .
+
+# Valores literales asignados a data areas
+rg -n 'VALUE\(' . | grep -vi '\.md'
+
+# Historial: valores eliminados y bibliotecas/perfiles embebidos
+git log -p --all -S'PASSWORD' -- .
+git log --oneline --all -- USPS_Address/
+rg -i -n 'lennon' .
+```
+
+Resultado: los únicos aciertos son los recogidos en la tabla 1.4; ninguno contiene un valor de
+credencial. Para repetir la verificación tras nuevos commits, basta con reejecutar el bloque
+anterior sobre la revisión correspondiente.
+
 ### 1.3 Conclusión
 
 **No se encontró ningún secreto real (contraseña, token, clave de API o cadena de conexión con
@@ -100,11 +128,14 @@ Un data area con una credencial debe ser ilegible para `*PUBLIC`:
 
 ```
 GRTOBJAUT  OBJ(APPLIB/USPS_PWD) OBJTYPE(*DTAARA) USER(*PUBLIC) AUT(*EXCLUDE)
-GRTOBJAUT  OBJ(APPLIB/USPS_PWD) OBJTYPE(*DTAARA) USER(APPOWNER) AUT(*USE)
+GRTOBJAUT  OBJ(APPLIB/USPS_PWD) OBJTYPE(*DTAARA) USER(APPOWNER) AUT(*OBJOPR *READ)
 ```
 
-- `*EXCLUDE` para `*PUBLIC`, autoridad explícita `*USE` solo para el perfil propietario de la
-  aplicación (y, si procede, para el perfil del trabajo por lotes que la ejecuta).
+- `*EXCLUDE` para `*PUBLIC`, y para el perfil propietario de la aplicación (y, si procede, para
+  el perfil del trabajo por lotes que la ejecuta) solo la autoridad de **lectura**:
+  `*OBJOPR *READ`. Basta para `RTVDTAARA`/`in` y, a diferencia de `*USE`, no incluye `*EXECUTE`.
+  Ni `*USE` ni `*OBJOPR *READ` permiten `CHGDTAARA` (que exige `*ADD`/`*UPD`), pero conviene
+  conceder lo mínimo: quien carga o rota el valor debe ser un perfil administrativo distinto.
 - Repetir para `USPS_ID`: el user id también es una credencial parcial.
 - Comprobar además la autoridad de la **biblioteca** que los contiene: `*PUBLIC *EXCLUDE` sobre
   el objeto no basta si la biblioteca permite listar y copiar objetos con autoridad heredada.
@@ -115,16 +146,26 @@ GRTOBJAUT  OBJ(APPLIB/USPS_PWD) OBJTYPE(*DTAARA) USER(APPOWNER) AUT(*USE)
 Para que los usuarios finales puedan ejecutar el programa sin tener autoridad directa sobre el
 data area, el programa debe adoptar la autoridad de su propietario:
 
+`USADRVAL` es `nomain` y se construye como módulo + programa de servicio (ver las instrucciones
+de compilación en su cabecera), así que la autoridad adoptada se fija en el `*SRVPGM`:
+
 ```
-CRTBNDRPG  PGM(APPLIB/USADRVAL) USRPRF(*OWNER) USEADPAUT(*NO)
-CHGPGM     PGM(APPLIB/USADRVAL) USRPRF(*OWNER)
+CRTSQLRPGI OBJ(APPLIB/USADRVAL) OBJTYPE(*MODULE)
+CRTSRVPGM  SRVPGM(APPLIB/USADRVAL) MODULE(APPLIB/USADRVAL) EXPORT(*ALL) +
+             USRPRF(*OWNER)
+CHGSRVPGM  SRVPGM(APPLIB/USADRVAL) USRPRF(*OWNER)
 ```
+
+Para un programa `*PGM` con main (no es el caso de `USADRVAL`) el equivalente es
+`CRTBNDRPG ... USRPRF(*OWNER) USEADPAUT(*NO)` / `CHGPGM ... USRPRF(*OWNER)`.
 
 Reglas:
 
 - El propietario debe ser un **perfil de aplicación sin contraseña**
   (`CRTUSRPRF ... PASSWORD(*NONE)`), nunca `QSECOFR` ni un perfil con `*ALLOBJ`.
-- `USEADPAUT(*NO)` en los programas que no deban propagar la autoridad adoptada hacia abajo.
+- `USEADPAUT(*NO)` (parámetro de `CRTBNDRPG`/`CHGPGM` y de `CRTSRVPGM`/`CHGSRVPGM` en las
+  releases que lo soportan) en los objetos que no deban usar la autoridad adoptada por sus
+  llamadores.
 - La autoridad adoptada no se propaga a programas ILE de servicio llamados en otro grupo de
   activación con `ACTGRP` distinto: verificar el encadenamiento real antes de asumir que funciona.
 - Adoptar la autoridad mínima: el perfil propietario solo necesita `*USE` sobre el data area.
