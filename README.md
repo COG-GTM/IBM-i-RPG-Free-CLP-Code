@@ -8,6 +8,8 @@ My intent is to provide real programs that help you learn and/or improve your cu
 
 Feel free to provide comments and feedback as issues.
 
+Credentials used by this code (for example the USPS Webtools user id and password) must never be hard coded. See [Secrets Management](docs/SECRETS_MANAGEMENT.md) for how they are stored and secured.
+
 # Source Control Philosophy 
 
 This code in this repository is based on having source in the file system (IFS) rather than the traditional approach of members in a PF-SRC file.
